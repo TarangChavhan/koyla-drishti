@@ -17,26 +17,10 @@ import {
 
 export const AdminReports: React.FC = () => {
   const { showToast } = useToast();
-  const [reports, setReports] = useState<ReportItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [reports, setReports] = useState(reportService.getAllReports());
   const [typeFilter, setTypeFilter] = useState('All');
   const [search, setSearch] = useState('');
   const [isGenerateOpen, setIsGenerateOpen] = useState(false);
-
-  const loadReports = async () => {
-    try {
-      const data = await reportService.getAllReports();
-      setReports(data || []);
-    } catch (err) {
-      console.error('Failed to load reports', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  React.useEffect(() => {
-    loadReports();
-  }, []);
 
   const filteredReports = reports.filter((r) => {
     const matchSearch = r.title.toLowerCase().includes(search.toLowerCase()) || r.id.toLowerCase().includes(search.toLowerCase());
@@ -139,7 +123,7 @@ export const AdminReports: React.FC = () => {
       <GenerateReportModal
         isOpen={isGenerateOpen}
         onClose={() => setIsGenerateOpen(false)}
-        onReportGenerated={loadReports}
+        onReportGenerated={() => setReports(reportService.getAllReports())}
       />
     </div>
   );

@@ -28,8 +28,7 @@ import {
 
 export const AdminMines: React.FC = () => {
   const { showToast } = useToast();
-  const [mines, setMines] = useState<Mine[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [mines, setMines] = useState(mineService.getAllMines());
   const [search, setSearch] = useState('');
   const [stateFilter, setStateFilter] = useState('All');
   const [riskFilter, setRiskFilter] = useState('All');
@@ -50,41 +49,39 @@ export const AdminMines: React.FC = () => {
   const [editRisk, setEditRisk] = useState<RiskLevel>('Medium');
   const [editStatus, setEditStatus] = useState<ComplianceStatus>('Compliant');
 
-  const [mineViolations, setMineViolations] = useState<any[]>([]);
-  const [mineInspections, setMineInspections] = useState<any[]>([]);
-  const [mineDocuments, setMineDocuments] = useState<any[]>([]);
+  const filteredMines = useMemo(() => {
+    return mines
+      .filter((m) => {
+        const matchesSearch =
+          m.name.toLowerCase().includes(search.toLowerCase()) ||
+          m.id.toLowerCase().includes(search.toLowerCase()) ||
+          m.operator.toLowerCase().includes(search.toLowerCase()) ||
+          m.district.toLowerCase().includes(search.toLowerCase());
+        const matchesState = stateFilter === 'All' || m.state === stateFilter;
+        const matchesRisk = riskFilter === 'All' || m.riskLevel === riskFilter;
+        const matchesStatus = statusFilter === 'All' || m.status === statusFilter;
+        return matchesSearch && matchesState && matchesRisk && matchesStatus;
+      })
+      .sort((a, b) => {
+        let valA = a[sortField];
+        let valB = b[sortField];
+        if (typeof valA === 'string') {
+          return sortAsc
+            ? (valA as string).localeCompare(valB as string)
+            : (valB as string).localeCompare(valA as string);
+        }
+        return sortAsc
+          ? (valA as number) - (valB as number)
+          : (valB as number) - (valA as number);
+      });
+  }, [mines, search, stateFilter, riskFilter, statusFilter, sortField, sortAsc]);
 
-  const fetchMines = async () => {
-    setIsLoading(true);
-    try {
-      const data = await mineService.getAllMines();
-      setMines(data);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const totalPages = Math.ceil(filteredMines.length / itemsPerPage) || 1;
+  const paginatedMines = filteredMines.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
-  useEffect(() => {
-    fetchMines();
-  }, []);
-
-  const openDetails = async (mine: Mine) => {
+  const openDetails = (mine: Mine) => {
     setSelectedMine(mine);
     setIsDetailsOpen(true);
-    try {
-      const [vios, insps, docs] = await Promise.all([
-        violationService.getViolationsByMine(mine.id),
-        inspectionService.getInspectionsByMine(mine.id),
-        reportService.getAllDocuments(mine.id)
-      ]);
-      setMineViolations(vios);
-      setMineInspections(insps);
-      setMineDocuments(docs);
-    } catch (e) {
-      console.error(e);
-    }
   };
 
   const openEdit = (mine: Mine) => {
@@ -96,23 +93,35 @@ export const AdminMines: React.FC = () => {
     setIsEditOpen(true);
   };
 
-  const handleSaveEdit = async (e: React.FormEvent) => {
+  const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedMine) return;
-    try {
-      const updated = await mineService.updateMine(selectedMine.id, {
-        name: editName,
-        complianceScore: Number(editScore),
-        riskLevel: editRisk,
-        status: editStatus
-      });
-      await fetchMines();
-      showToast(`Updated record for ${updated.name}`, 'success');
-      setIsEditOpen(false);
-    } catch (err: any) {
-      showToast(err.message || 'Failed to update mine', 'warn');
-    }
+    const updated = mineService.updateMine(selectedMine.id, {
+      name: editName,
+      complianceScore: Number(editScore),
+      riskLevel: editRisk,
+      status: editStatus
+    });
+    setMines(mineService.getAllMines());
+    showToast(`Updated record for ${updated.name}`, 'success');
+    setIsEditOpen(false);
   };
+
+  // Associated details for selected mine
+  const mineViolations = useMemo(() => {
+    if (!selectedMine) return [];
+    return violationService.getAllViolations().filter((v) => v.mineId === selectedMine.id);
+  }, [selectedMine]);
+
+  const mineInspections = useMemo(() => {
+    if (!selectedMine) return [];
+    return inspectionService.getAllInspections().filter((i) => i.mineId === selectedMine.id);
+  }, [selectedMine]);
+
+  const mineDocuments = useMemo(() => {
+    if (!selectedMine) return [];
+    return reportService.getAllDocuments(selectedMine.id);
+  }, [selectedMine]);
 
   return (
     <div className="space-y-5">

@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
+import React, { useState } from 'react';
 import { violationService } from '../../services/violationService';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { SubmitEvidenceModal } from '../../components/mine/SubmitEvidenceModal';
@@ -8,34 +7,13 @@ import { Violation, CorrectiveAction } from '../../types';
 import { ShieldAlert, AlertTriangle, Clock, ArrowRight, CheckCircle2 } from 'lucide-react';
 
 export const MineViolations: React.FC = () => {
-  const { user } = useAuth();
   const { showToast } = useToast();
-  const currentMineId = user?.mineId || 'KD-101';
-  const [violations, setViolations] = useState<Violation[]>([]);
-  const [actions, setActions] = useState<CorrectiveAction[]>([]);
-  const [loading, setLoading] = useState(true);
+  const currentMineId = 'KD-101';
+  const [violations, setViolations] = useState(violationService.getViolationsByMine(currentMineId));
+  const [actions, setActions] = useState(violationService.getActionsByMine(currentMineId));
 
   const [selectedAction, setSelectedAction] = useState<CorrectiveAction | null>(null);
   const [isSubmitOpen, setIsSubmitOpen] = useState(false);
-
-  const loadData = async () => {
-    try {
-      const [vList, aList] = await Promise.all([
-        violationService.getViolationsByMine(currentMineId),
-        violationService.getActionsByMine(currentMineId)
-      ]);
-      setViolations(vList || []);
-      setActions(aList || []);
-    } catch (err) {
-      console.error('Failed to load mine violations', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadData();
-  }, [currentMineId]);
 
   const openEvidenceModal = (violationId: string) => {
     const act = actions.find((a) => a.violationId === violationId) || actions[0];
@@ -44,7 +22,8 @@ export const MineViolations: React.FC = () => {
   };
 
   const refreshData = () => {
-    loadData();
+    setViolations(violationService.getViolationsByMine(currentMineId));
+    setActions(violationService.getActionsByMine(currentMineId));
   };
 
   return (

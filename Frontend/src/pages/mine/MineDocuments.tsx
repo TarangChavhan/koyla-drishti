@@ -26,8 +26,9 @@ export const MineDocuments: React.FC = () => {
   const { user } = useAuth();
   const { showToast } = useToast();
   const currentMineId = user?.mineId || 'KD-104';
-  const [documents, setDocuments] = useState<MineDocument[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [documents, setDocuments] = useState<MineDocument[]>(() =>
+    reportService.getAllDocuments(currentMineId)
+  );
 
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
@@ -40,21 +41,6 @@ export const MineDocuments: React.FC = () => {
   const [docTitle, setDocTitle] = useState('');
   const [docCategory, setDocCategory] = useState<MineDocument['category']>('Environment');
   const [docExpiry, setDocExpiry] = useState('2028-12-31');
-
-  const loadDocs = async () => {
-    try {
-      const data = await reportService.getAllDocuments(currentMineId);
-      setDocuments(data || []);
-    } catch (err) {
-      console.error('Failed to load documents', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  React.useEffect(() => {
-    loadDocs();
-  }, [currentMineId]);
 
   // Filtered documents
   const filteredDocs = useMemo(() => {
@@ -78,30 +64,26 @@ export const MineDocuments: React.FC = () => {
     setIsPreviewOpen(true);
   };
 
-  const handleUploadSubmit = async (e: React.FormEvent) => {
+  const handleUploadSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!docTitle) return;
 
-    try {
-      const newDoc = await reportService.uploadDocument({
-        mineId: currentMineId,
-        mineName: user?.organization || 'Bharat Coking Coal Mine',
-        title: docTitle,
-        category: docCategory,
-        fileName: `${docTitle.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`,
-        fileSize: '4.8 MB',
-        fileType: 'pdf',
-        status: 'Verified',
-        expiryDate: docExpiry
-      });
+    const newDoc = reportService.uploadDocument({
+      mineId: currentMineId,
+      mineName: user?.organization || 'Bharat Coking Coal Mine',
+      title: docTitle,
+      category: docCategory,
+      fileName: `${docTitle.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`,
+      fileSize: '4.8 MB',
+      fileType: 'pdf',
+      status: 'Verified',
+      expiryDate: docExpiry
+    });
 
-      await loadDocs();
-      showToast(`Document "${newDoc.title}" uploaded and cryptographically signed`, 'success');
-      setIsUploadOpen(false);
-      setDocTitle('');
-    } catch (err) {
-      showToast('Failed to upload document', 'warn');
-    }
+    setDocuments(reportService.getAllDocuments(currentMineId));
+    showToast(`Document "${newDoc.title}" uploaded and cryptographically signed`, 'success');
+    setIsUploadOpen(false);
+    setDocTitle('');
   };
 
   return (

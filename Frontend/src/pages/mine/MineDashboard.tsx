@@ -1,17 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { KpiCard } from '../../components/common/KpiCard';
 import { StatusBadge } from '../../components/common/StatusBadge';
-import { useAuth } from '../../context/AuthContext';
 import { mineService } from '../../services/mineService';
 import { violationService } from '../../services/violationService';
 import { inspectionService } from '../../services/inspectionService';
 import { reportService } from '../../services/reportService';
-import { dashboardService, MineDashboardData } from '../../services/dashboardService';
 import { SubmitEvidenceModal } from '../../components/mine/SubmitEvidenceModal';
 import { DocumentPreviewModal } from '../../components/mine/DocumentPreviewModal';
 import { useToast } from '../../context/ToastContext';
-import { Mine, Violation, CorrectiveAction, Inspection, MineDocument } from '../../types';
+import { CorrectiveAction, MineDocument } from '../../types';
 import {
   Building2,
   AlertTriangle,
@@ -27,52 +25,21 @@ import {
 
 export const MineDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const { showToast } = useToast();
 
-  const currentMineId = user?.mineId || 'KD-104';
-  const [mine, setMine] = useState<Mine | null>(null);
-  const [violations, setViolations] = useState<Violation[]>([]);
-  const [actions, setActions] = useState<CorrectiveAction[]>([]);
-  const [inspections, setInspections] = useState<Inspection[]>([]);
-  const [documents, setDocuments] = useState<MineDocument[]>([]);
-  const [dashboardData, setDashboardData] = useState<MineDashboardData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const currentMineId = 'KD-101';
+  const mine = mineService.getMineById(currentMineId) || mineService.getAllMines()[0];
+  const [violations, setViolations] = useState(violationService.getViolationsByMine(currentMineId));
+  const [actions, setActions] = useState(violationService.getActionsByMine(currentMineId));
+  const [inspections] = useState(inspectionService.getInspectionsByMine(currentMineId));
+  const [documents] = useState(reportService.getAllDocuments(currentMineId));
 
   const [selectedAction, setSelectedAction] = useState<CorrectiveAction | null>(null);
   const [isSubmitOpen, setIsSubmitOpen] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState<MineDocument | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
-  const loadData = async () => {
-    setIsLoading(true);
-    try {
-      const [dash, m, vList, aList, iList, dList] = await Promise.all([
-        dashboardService.getMineDashboard(),
-        mineService.getMineById(currentMineId),
-        violationService.getViolationsByMine(currentMineId),
-        violationService.getActionsByMine(currentMineId),
-        inspectionService.getInspectionsByMine(currentMineId),
-        reportService.getAllDocuments(currentMineId)
-      ]);
-      setDashboardData(dash);
-      setMine(m || null);
-      setViolations(vList);
-      setActions(aList);
-      setInspections(iList);
-      setDocuments(dList);
-    } catch (e: any) {
-      console.error('Failed to load mine dashboard data:', e);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadData();
-  }, [currentMineId]);
-
-  const pendingActions = actions.filter((a) => a.status === 'Pending Response' || a.status === 'Rejected');
+  const pendingActions = actions.filter((a) => a.status === 'Pending' || a.status === 'Rejected');
 
   const openSubmitEvidence = (action: CorrectiveAction) => {
     setSelectedAction(action);
@@ -84,13 +51,10 @@ export const MineDashboard: React.FC = () => {
     setIsPreviewOpen(true);
   };
 
-  const refreshData = async () => {
-    await loadData();
+  const refreshData = () => {
+    setViolations(violationService.getViolationsByMine(currentMineId));
+    setActions(violationService.getActionsByMine(currentMineId));
   };
-
-  const displayName = mine?.name || dashboardData?.mine_name || 'Bharat Coking Coal Mine (Dhanbad)';
-  const displayScore = dashboardData ? dashboardData.overall_compliance : mine ? mine.complianceScore : 88;
-  const displayStatus = dashboardData ? dashboardData.compliance_status : mine ? mine.status : 'Compliant';
 
   return (
     <div className="space-y-6">
@@ -105,25 +69,23 @@ export const MineDashboard: React.FC = () => {
           <div className="space-y-2 max-w-2xl">
             <div className="text-[10px] font-bold tracking-widest text-[#f5cd79] uppercase flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-[#f4b942] shadow-[0_0_6px_#f4b942]" />
-              Mine Compliance Terminal · DGMS Reg ID: {currentMineId}
+              Mine Compliance Terminal · DGMS Reg ID: {mine.id}
             </div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              {displayName}
+              {mine.name}
             </h1>
             <p className="text-xs text-[#f4dcb0] leading-relaxed">
-              Operator: <strong>{mine?.operator || 'Bharat Coking Coal Limited (BCCL)'}</strong> · {mine?.district || 'Dhanbad'}, {mine?.state || 'Jharkhand'}. Track statutory compliance deadlines, field audits, and submit corrective evidence dossiers.
+              Operator: <strong>{mine.operator}</strong> · {mine.district}, {mine.state}. Track statutory compliance deadlines, field audits, and submit corrective evidence dossiers.
             </p>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 border border-white/15 border-l-4 border-l-[#f4b942] text-[11px] text-white">
-              Next Statutory DGMS Audit: <strong>{mine?.nextInspection || '08 Sep 2026'}</strong>
+              Next Statutory DGMS Audit: <strong>{mine.nextInspection}</strong>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
             <div className="bg-[#120a02]/70 backdrop-blur-md border border-white/15 rounded-xl p-3.5 min-w-[120px] text-center">
               <span className="block text-[10px] text-[#e0c294] uppercase font-bold">Compliance Score</span>
-              <strong className="block text-3xl font-black text-[#f4b942] mt-1">
-                {isLoading ? '...' : `${displayScore}%`}
-              </strong>
+              <strong className="block text-3xl font-black text-[#f4b942] mt-1">{mine.complianceScore}%</strong>
             </div>
           </div>
         </div>
@@ -133,7 +95,7 @@ export const MineDashboard: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
           label="Compliance Status"
-          value={isLoading ? '...' : displayStatus}
+          value={mine.status}
           subtext="Under Regulatory Review"
           subtextColor="amber"
           icon={<CheckCircle2 className="w-5 h-5 text-[#e5a52a]" />}
@@ -141,7 +103,7 @@ export const MineDashboard: React.FC = () => {
         />
         <KpiCard
           label="Active Violations"
-          value={isLoading ? '...' : String(violations.length)}
+          value={String(violations.length)}
           subtext="Requires Immediate Response"
           subtextColor="red"
           icon={<AlertTriangle className="w-5 h-5 text-[#df4d52]" />}
@@ -149,7 +111,7 @@ export const MineDashboard: React.FC = () => {
         />
         <KpiCard
           label="Pending Corrective Actions"
-          value={isLoading ? '...' : String(pendingActions.length)}
+          value={String(pendingActions.length)}
           subtext="Upload remediation evidence"
           subtextColor="amber"
           icon={<FileCheck className="w-5 h-5 text-[#126fba]" />}
@@ -157,7 +119,7 @@ export const MineDashboard: React.FC = () => {
         />
         <KpiCard
           label="Verified Documents"
-          value={isLoading ? '...' : String(documents.length)}
+          value={String(documents.length)}
           subtext="All clearances current"
           subtextColor="green"
           icon={<FileText className="w-5 h-5 text-[#18a873]" />}
@@ -178,42 +140,36 @@ export const MineDashboard: React.FC = () => {
             </div>
             <button
               onClick={() => navigate('/mine/actions')}
-              className="text-[11px] font-bold text-[#126fba] hover:underline cursor-pointer"
+              className="text-[11px] font-bold text-[#126fba] hover:underline"
             >
               All Actions ({actions.length}) →
             </button>
           </div>
 
           <div className="space-y-3">
-            {actions.length === 0 ? (
-              <div className="p-8 text-center text-xs text-[#728594] border border-dashed rounded-xl">
-                No open corrective actions assigned.
-              </div>
-            ) : (
-              actions.map((act) => (
-                <div
-                  key={act.id}
-                  className="p-4 rounded-xl border border-[#e2e9ee] bg-[#fbfdfd] hover:border-[#126fba]/40 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs"
-                >
-                  <div className="space-y-1 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono font-bold text-[#126fba]">{act.id}</span>
-                      <span className="text-[10px] text-[#728594]">Due: {act.dueDate}</span>
-                      <StatusBadge status={act.status} size="sm" />
-                    </div>
-                    <h4 className="font-bold text-[#152737]">{act.title}</h4>
-                    <p className="text-[#526a79] leading-relaxed text-[11px]">{act.instructions}</p>
+            {actions.map((act) => (
+              <div
+                key={act.id}
+                className="p-4 rounded-xl border border-[#e2e9ee] bg-[#fbfdfd] hover:border-[#126fba]/40 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs"
+              >
+                <div className="space-y-1 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-bold text-[#126fba]">{act.id}</span>
+                    <span className="text-[10px] text-[#728594]">Due: {act.dueDate}</span>
+                    <StatusBadge status={act.status} size="sm" />
                   </div>
-
-                  <button
-                    onClick={() => openSubmitEvidence(act)}
-                    className="px-3.5 py-1.5 rounded-lg bg-[#159e89] hover:bg-[#128674] text-white font-bold text-xs shadow transition-colors shrink-0 cursor-pointer"
-                  >
-                    Submit Evidence
-                  </button>
+                  <h4 className="font-bold text-[#152737]">{act.title}</h4>
+                  <p className="text-[#526a79] leading-relaxed text-[11px]">{act.instructions}</p>
                 </div>
-              ))
-            )}
+
+                <button
+                  onClick={() => openSubmitEvidence(act)}
+                  className="px-3.5 py-1.5 rounded-lg bg-[#159e89] hover:bg-[#128674] text-white font-bold text-xs shadow transition-colors shrink-0"
+                >
+                  Submit Evidence
+                </button>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -228,36 +184,30 @@ export const MineDashboard: React.FC = () => {
             </div>
             <button
               onClick={() => navigate('/mine/inspections')}
-              className="text-[11px] font-bold text-[#126fba] hover:underline cursor-pointer"
+              className="text-[11px] font-bold text-[#126fba] hover:underline"
             >
               History →
             </button>
           </div>
 
           <div className="space-y-2.5">
-            {inspections.length === 0 ? (
-              <div className="p-6 text-center text-xs text-[#728594]">
-                No recent inspections recorded.
-              </div>
-            ) : (
-              inspections.slice(0, 3).map((ins) => (
-                <div key={ins.id} className="p-3 rounded-xl border border-[#e2e9ee] bg-white text-xs space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono font-bold text-[#126fba]">{ins.id}</span>
-                    <StatusBadge status={ins.status} size="sm" />
-                  </div>
-                  <strong className="text-[#152737] block">{ins.inspectionType} Audit</strong>
-                  <p className="text-[11px] text-[#526a79]">Inspector: {ins.inspectorName}</p>
-                  <p className="text-[11px] text-[#728594]">{ins.observations || 'Routine checklist in progress.'}</p>
+            {inspections.slice(0, 3).map((ins) => (
+              <div key={ins.id} className="p-3 rounded-xl border border-[#e2e9ee] bg-white text-xs space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono font-bold text-[#126fba]">{ins.id}</span>
+                  <StatusBadge status={ins.status} size="sm" />
                 </div>
-              ))
-            )}
+                <strong className="text-[#152737] block">{ins.inspectionType} Audit</strong>
+                <p className="text-[11px] text-[#526a79]">Inspector: {ins.inspectorName}</p>
+                <p className="text-[11px] text-[#728594]">{ins.observations || 'Routine checklist in progress.'}</p>
+              </div>
+            ))}
           </div>
 
           <div className="pt-2 border-t border-[#e2e9ee]">
             <button
               onClick={() => navigate('/mine/documents')}
-              className="w-full py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-[#526a79] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              className="w-full py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-[#526a79] flex items-center justify-center gap-1.5 transition-colors"
             >
               <UploadCloud className="w-4 h-4" />
               Upload Statutory DGMS Document / Return

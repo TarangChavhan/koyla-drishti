@@ -8,27 +8,11 @@ import { Calendar, Search, Filter, Play, CheckCircle2, FileText, Clock } from 'l
 
 export const InspectorInspections: React.FC = () => {
   const { showToast } = useToast();
-  const [inspections, setInspections] = useState<Inspection[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [inspections, setInspections] = useState(inspectionService.getAllInspections());
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [selectedInspection, setSelectedInspection] = useState<Inspection | null>(null);
   const [isExecOpen, setIsExecOpen] = useState(false);
-
-  const loadData = async () => {
-    try {
-      const data = await inspectionService.getAllInspections();
-      setInspections(data || []);
-    } catch (err) {
-      console.error('Failed to load inspector inspections', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  React.useEffect(() => {
-    loadData();
-  }, []);
 
   const filtered = useMemo(() => {
     return inspections.filter((ins) => {
@@ -46,7 +30,7 @@ export const InspectorInspections: React.FC = () => {
   };
 
   const refreshData = () => {
-    loadData();
+    setInspections(inspectionService.getAllInspections());
   };
 
   return (

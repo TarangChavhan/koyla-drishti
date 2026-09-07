@@ -1,49 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { notificationService } from '../../services/notificationService';
 import { useToast } from '../../context/ToastContext';
 import { Bell, CheckCheck, Trash2, Filter, AlertTriangle, FileText, ShieldAlert } from 'lucide-react';
-import { NotificationItem } from '../../types';
 
 export const AdminNotifications: React.FC = () => {
   const { showToast } = useToast();
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState(notificationService.getNotifications('admin'));
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
-
-  const loadNotifications = async () => {
-    try {
-      const data = await notificationService.getNotifications('admin');
-      setNotifications(data || []);
-    } catch (err) {
-      console.error('Failed to load notifications', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadNotifications();
-  }, []);
 
   const filtered = notifications.filter((n) => filter === 'all' || !n.read);
 
-  const handleMarkAllRead = async () => {
-    try {
-      await notificationService.markAllAsRead();
-      await loadNotifications();
-      showToast('All notifications marked as read', 'success');
-    } catch (err) {
-      showToast('Failed to mark all as read', 'warn');
-    }
+  const handleMarkAllRead = () => {
+    notificationService.markAllAsRead();
+    setNotifications(notificationService.getNotifications('admin'));
+    showToast('All notifications marked as read', 'success');
   };
 
-  const handleToggleRead = async (id: string) => {
-    try {
-      await notificationService.markAsRead(id);
-      await loadNotifications();
-    } catch (err) {
-      console.error(err);
-    }
+  const handleToggleRead = (id: string) => {
+    notificationService.markAsRead(id);
+    setNotifications(notificationService.getNotifications('admin'));
   };
 
   return (

@@ -38,54 +38,42 @@ export const VerifyAlertModal: React.FC<VerifyAlertModalProps> = ({
 
   if (!alert) return null;
 
-  const handleVerify = async () => {
-    try {
-      await alertService.updateAlertStatus(alert.id, 'Verified', officerNote);
-      showToast(`AI Alert ${alert.id} verified as legitimate observation`, 'success');
-      if (onUpdated) onUpdated();
-      setActiveTab('violation');
-    } catch (err: any) {
-      showToast(err.message || 'Verification failed', 'warn');
-    }
+  const handleVerify = () => {
+    alertService.updateAlertStatus(alert.id, 'Verified', officerNote);
+    showToast(`AI Alert ${alert.id} verified as legitimate observation`, 'success');
+    if (onUpdated) onUpdated();
+    setActiveTab('violation');
   };
 
-  const handleRejectFalsePositive = async () => {
-    try {
-      await alertService.updateAlertStatus(alert.id, 'False Positive', officerNote || 'Marked as false detection after site review');
-      showToast(`Alert ${alert.id} dismissed as False Positive`, 'info');
-      if (onUpdated) onUpdated();
-      onClose();
-    } catch (err: any) {
-      showToast(err.message || 'Failed to dismiss alert', 'warn');
-    }
+  const handleRejectFalsePositive = () => {
+    alertService.updateAlertStatus(alert.id, 'False Positive', officerNote || 'Marked as false detection after site review');
+    showToast(`Alert ${alert.id} dismissed as False Positive`, 'info');
+    if (onUpdated) onUpdated();
+    onClose();
   };
 
-  const handleCreateViolation = async (e: React.FormEvent) => {
+  const handleCreateViolation = (e: React.FormEvent) => {
     e.preventDefault();
     const deadlineDate = new Date();
     deadlineDate.setDate(deadlineDate.getDate() + Number(deadlineDays));
     const formattedDeadline = deadlineDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
 
-    try {
-      await violationService.createViolation({
-        mineId: alert.mineId,
-        mineName: alert.mineName,
-        category: violationCategory,
-        severity: alert.severity as ViolationSeverity,
-        description: alert.detectedIssue,
-        issuedDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }),
-        deadline: formattedDeadline,
-        assignedInspector: alert.assignedInspector || 'Rajesh Sharma, DGMS',
-        status: 'Open',
-        correctiveActionText: correctiveDirectives || alert.recommendedAction
-      });
+    violationService.createViolation({
+      mineId: alert.mineId,
+      mineName: alert.mineName,
+      category: violationCategory,
+      severity: alert.severity as ViolationSeverity,
+      description: alert.detectedIssue,
+      issuedDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }),
+      deadline: formattedDeadline,
+      assignedInspector: alert.assignedInspector || 'Rajesh Sharma, DGMS',
+      status: 'Open',
+      correctiveActionText: correctiveDirectives || alert.recommendedAction
+    });
 
-      showToast(`Statutory Violation Case and Corrective Action issued to ${alert.mineName}`, 'success');
-      if (onUpdated) onUpdated();
-      onClose();
-    } catch (err: any) {
-      showToast(err.message || 'Failed to issue statutory violation order', 'warn');
-    }
+    showToast(`Statutory Violation Case and Corrective Action issued to ${alert.mineName}`, 'success');
+    if (onUpdated) onUpdated();
+    onClose();
   };
 
   return (

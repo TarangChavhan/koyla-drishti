@@ -1,76 +1,118 @@
 import { Inspection, InspectionStatus } from '../types';
-import { api } from './api';
 import { INITIAL_INSPECTIONS } from './mockData';
 
+const INSPECTIONS_STORAGE_KEY = 'koyla_drishti_inspections';
+
+function getStoredInspections(): Inspection[] {
+  const data = localStorage.getItem(INSPECTIONS_STORAGE_KEY);
+  if (data) {
+    try {
+      const parsed = JSON.parse(data);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        // Merge in any initial inspections that aren't in stored yet
+        const ids = new Set(parsed.map((i: Inspection) => i.id));
+        let updated = false;
+        for (const initI of INITIAL_INSPECTIONS) {
+          if (!ids.has(initI.id)) {
+            parsed.push(initI);
+            updated = true;
+          }
+        }
+        if (updated) {
+          localStorage.setItem(INSPECTIONS_STORAGE_KEY, JSON.stringify(parsed));
+        }
+        return parsed;
+      }
+    } catch {
+      // fallback
+    }
+  }
+  localStorage.setItem(INSPECTIONS_STORAGE_KEY, JSON.stringify(INITIAL_INSPECTIONS));
+  return INITIAL_INSPECTIONS;
+}
+
 export const inspectionService = {
-  async getAllInspections(): Promise<Inspection[]> {
-    try {
-      return await api.get<Inspection[]>('/inspections');
-    } catch {
-      return INITIAL_INSPECTIONS;
-    }
+  getAllInspections(): Inspection[] {
+    return getStoredInspections();
   },
 
-  async getInspectionsByMine(mineId: string): Promise<Inspection[]> {
-    try {
-      return await api.get<Inspection[]>('/inspections', { mine_id: mineId });
-    } catch {
-      return INITIAL_INSPECTIONS.filter(
-        (i) => i.mineId?.toLowerCase() === mineId.toLowerCase() || i.mineName.toLowerCase().includes(mineId.toLowerCase())
-      );
-    }
+  getInspectionsByMine(mineId: string): Inspection[] {
+    return getStoredInspections().filter(
+      (i) => i.mineId?.toLowerCase() === mineId.toLowerCase() || i.mineName.toLowerCase().includes(mineId.toLowerCase())
+    );
   },
 
-  async getInspectionById(id: string): Promise<Inspection | undefined> {
-    try {
-      return await api.get<Inspection>(`/inspections/${id}`);
-    } catch {
-      return INITIAL_INSPECTIONS.find((i) => i.id === id);
-    }
+  getInspectionById(id: string): Inspection | undefined {
+    const list = getStoredInspections();
+    return list.find((ins) => ins.id === id);
   },
 
-  async createInspection(data: Omit<Inspection, 'id' | 'evidenceFilesCount'> & { id?: string }): Promise<Inspection> {
-    try {
-      return await api.post<Inspection>('/inspections', data);
-    } catch {
-      const newInsp: Inspection = {
-        ...data,
-        id: data.id || `INS-${Math.floor(2420 + Math.random() * 80)}`,
-        evidenceFilesCount: 0
-      };
-      return newInsp;
-    }
+  createInspection(data: Omit<Inspection, 'id' | 'evidenceFilesCount'>): Inspection {
+    const list = getStoredInspections();
+    const newId = `INS-${Math.floor(2420 + Math.random() * 80)}`;
+    const newInspection: Inspection = {
+      ...data,
+      id: newId,
+      evidenceFilesCount: 0
+    };
+    const updated = [newInspection, ...list];
+    localStorage.setItem(INSPECTIONS_STORAGE_KEY, JSON.stringify(updated));
+    return newInspection;
   },
 
-  async updateInspection(id: string, updates: Partial<Inspection>): Promise<Inspection> {
-    try {
-      return await api.put<Inspection>(`/inspections/${id}`, updates);
-    } catch {
-      const existing = INITIAL_INSPECTIONS.find((i) => i.id === id) || INITIAL_INSPECTIONS[0];
-      return { ...existing, ...updates };
-    }
+  updateInspection(id: string, updates: Partial<Inspection>): Inspection {
+    const list = getStoredInspections();
+    const idx = list.findIndex((ins) => ins.id === id);
+    if (idx === -1) throw new Error('Inspection not found');
+
+    const updated = { ...list[idx], ...updates };
+    list[idx] = updated;
+    localStorage.setItem(INSPECTIONS_STORAGE_KEY, JSON.stringify(list));
+    return updated;
   },
 
-  async submitInspectionReport(
+  updateChecklist(id: string, checklistItemId: string, completed: boolean, findings?: string): Inspection {
+    const list = getStoredInspections();
+    const idx = list.findIndex((ins) => ins.id === id);
+    if (idx === -1) throw new Error('Inspection not found');
+
+    const insp = list[idx];
+    const items = insp.checklistItems.map((item) => {
+      if (item.id === checklistItemId) {
+        return {
+          ...item,
+          completed,
+          findings: findings !== undefined ? findings : item.findings
+        };
+      }
+      return item;
+    });
+
+    const updated = { ...insp, checklistItems: items };
+    list[idx] = updated;
+    localStorage.setItem(INSPECTIONS_STORAGE_KEY, JSON.stringify(list));
+    return updated;
+  },
+
+  submitInspectionReport(
     id: string,
     observations: string,
     recommendations: string,
     finalStatus: InspectionStatus = 'Submitted'
-  ): Promise<Inspection> {
-    try {
-      return await api.post<Inspection>(`/inspections/${id}/submit`, {
-        observations,
-        recommendations,
-        status: finalStatus
-      });
-    } catch {
-      return {
-        ...INITIAL_INSPECTIONS[0],
-        id,
-        observations,
-        recommendations,
-        status: finalStatus
-      };
-    }
+  ): Inspection {
+    const list = getStoredInspections();
+    const idx = list.findIndex((ins) => ins.id === id);
+    if (idx === -1) throw new Error('Inspection not found');
+
+    const updated: Inspection = {
+      ...list[idx],
+      observations,
+      recommendations,
+      status: finalStatus,
+      evidenceFilesCount: list[idx].evidenceFilesCount + 2
+    };
+    list[idx] = updated;
+    localStorage.setItem(INSPECTIONS_STORAGE_KEY, JSON.stringify(list));
+    return updated;
   }
 };

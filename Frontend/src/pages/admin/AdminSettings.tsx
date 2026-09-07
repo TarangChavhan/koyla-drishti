@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { api } from '../../services/api';
+import React, { useState } from 'react';
 import { useToast } from '../../context/ToastContext';
 import { Shield, Bell, Database, Lock, Sliders, CheckCircle2, Save } from 'lucide-react';
 
@@ -12,39 +11,10 @@ export const AdminSettings: React.FC = () => {
   const [twoFactorEnforced, setTwoFactorEnforced] = useState(true);
   const [sessionTimeoutMins, setSessionTimeoutMins] = useState(30);
   const [auditLogRetentionYears, setAuditLogRetentionYears] = useState(7);
-  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    api.get<any>('/settings').then((data) => {
-      if (data) {
-        if (data.aiConfidenceThreshold != null) setAiConfidenceThreshold(data.aiConfidenceThreshold);
-        if (data.satellitePollingHours != null) setSatellitePollingHours(data.satellitePollingHours);
-        if (data.autoNotifyInspectors != null) setAutoNotifyInspectors(data.autoNotifyInspectors);
-        if (data.twoFactorEnforced != null) setTwoFactorEnforced(data.twoFactorEnforced);
-        if (data.sessionTimeoutMins != null) setSessionTimeoutMins(data.sessionTimeoutMins);
-        if (data.auditLogRetentionYears != null) setAuditLogRetentionYears(data.auditLogRetentionYears);
-      }
-    }).catch(() => {});
-  }, []);
-
-  const handleSave = async (e: React.FormEvent) => {
+  const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
-    try {
-      await api.put('/settings', {
-        aiConfidenceThreshold,
-        satellitePollingHours,
-        autoNotifyInspectors,
-        twoFactorEnforced,
-        sessionTimeoutMins,
-        auditLogRetentionYears
-      });
-      showToast('National Governance parameters and AI detection thresholds saved to database', 'success');
-    } catch {
-      showToast('National Governance parameters and AI detection thresholds saved', 'success');
-    } finally {
-      setSaving(false);
-    }
+    showToast('National Governance parameters and AI detection thresholds saved', 'success');
   };
 
   return (

@@ -21,9 +21,8 @@ import {
 
 export const AdminAlerts: React.FC = () => {
   const { showToast } = useToast();
-  const [alerts, setAlerts] = useState<AIAlert[]>([]);
-  const [mines, setMines] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [alerts, setAlerts] = useState(alertService.getAllAlerts());
+  const [mines] = useState(mineService.getAllMines());
   const [search, setSearch] = useState('');
   const [severityFilter, setSeverityFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -32,25 +31,6 @@ export const AdminAlerts: React.FC = () => {
   const [isVerifyOpen, setIsVerifyOpen] = useState(false);
   const [isAssignOpen, setIsAssignOpen] = useState(false);
   const [targetAlertForAssign, setTargetAlertForAssign] = useState<string | undefined>(undefined);
-
-  const loadData = async () => {
-    try {
-      const [fetchedAlerts, fetchedMines] = await Promise.all([
-        alertService.getAllAlerts(),
-        mineService.getAllMines()
-      ]);
-      setAlerts(fetchedAlerts || []);
-      setMines(fetchedMines || []);
-    } catch (err) {
-      console.error('Failed to load alerts', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  React.useEffect(() => {
-    loadData();
-  }, []);
 
   const filteredAlerts = useMemo(() => {
     return alerts.filter((a) => {
@@ -80,7 +60,7 @@ export const AdminAlerts: React.FC = () => {
   };
 
   const refreshAlerts = () => {
-    loadData();
+    setAlerts(alertService.getAllAlerts());
   };
 
   return (

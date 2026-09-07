@@ -1,39 +1,41 @@
 import { NotificationItem, UserRole } from '../types';
-import { api } from './api';
 import { INITIAL_NOTIFICATIONS } from './mockData';
 
+const NOTIF_STORAGE_KEY = 'koyla_drishti_notifications';
+
+function getStoredNotifications(): NotificationItem[] {
+  const data = localStorage.getItem(NOTIF_STORAGE_KEY);
+  if (data) {
+    try {
+      return JSON.parse(data);
+    } catch {
+      // fallback
+    }
+  }
+  localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(INITIAL_NOTIFICATIONS));
+  return INITIAL_NOTIFICATIONS;
+}
+
 export const notificationService = {
-  async getNotifications(role?: UserRole): Promise<NotificationItem[]> {
-    try {
-      return await api.get<NotificationItem[]>('/notifications');
-    } catch {
-      if (!role) return INITIAL_NOTIFICATIONS;
-      return INITIAL_NOTIFICATIONS.filter((n) => n.roleTarget === 'all' || n.roleTarget === role);
-    }
+  getNotifications(role?: UserRole): NotificationItem[] {
+    const all = getStoredNotifications();
+    if (!role) return all;
+    return all.filter((n) => n.roleTarget === 'all' || n.roleTarget === role);
   },
 
-  async markAsRead(id: string): Promise<void> {
-    try {
-      await api.patch(`/notifications/${id}/read`);
-    } catch {
-      // offline fallback
-    }
+  markAsRead(id: string): void {
+    const list = getStoredNotifications();
+    const updated = list.map((n) => (n.id === id ? { ...n, read: true } : n));
+    localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(updated));
   },
 
-  async markAllAsRead(): Promise<void> {
-    try {
-      await api.post('/notifications/read-all');
-    } catch {
-      // offline fallback
-    }
+  markAllAsRead(): void {
+    const list = getStoredNotifications();
+    const updated = list.map((n) => ({ ...n, read: true }));
+    localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(updated));
   },
 
-  async getUnreadCount(role?: UserRole): Promise<number> {
-    try {
-      const res = await api.get<{ unread_count: number }>('/notifications/unread-count');
-      return res.unread_count;
-    } catch {
-      return this.getNotifications(role).then((list) => list.filter((n) => !n.read).length).catch(() => 0);
-    }
+  getUnreadCount(role?: UserRole): number {
+    return this.getNotifications(role).filter((n) => !n.read).length;
   }
 };

@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { User, UserRole } from '../../types';
-import { authService } from '../../services/authService';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { useToast } from '../../context/ToastContext';
 import { Modal } from '../../components/common/Modal';
@@ -9,8 +8,63 @@ import { Users, UserPlus, Shield, KeyRound, Check, X, Search } from 'lucide-reac
 export const AdminUsers: React.FC = () => {
   const { showToast } = useToast();
   const [search, setSearch] = useState('');
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  const [users, setUsers] = useState<User[]>([
+    {
+      id: 'USR-001',
+      name: 'Dr. Anand Verma, IAS',
+      email: 'admin@coal.gov.in',
+      role: 'admin',
+      designation: 'Joint Secretary (Coal Governance)',
+      department: 'Ministry of Coal, Shastri Bhawan',
+      phone: '+91 11 2338 4567',
+      status: 'Active'
+    },
+    {
+      id: 'USR-002',
+      name: 'Rajesh Sharma',
+      email: 'inspector@dgms.gov.in',
+      role: 'inspector',
+      designation: 'Senior Inspector of Mines Safety',
+      department: 'Directorate General of Mines Safety (DGMS)',
+      phone: '+91 326 220 4891',
+      status: 'Active'
+    },
+    {
+      id: 'USR-003',
+      name: 'P. K. Mukherjee',
+      email: 'mine@bccl.gov.in',
+      role: 'mine',
+      designation: 'Chief General Manager (Safety & Environment)',
+      department: 'Bharat Coking Coal Limited (BCCL)',
+      mineId: 'KD-101',
+      mineName: 'Jharia Coalfield Block IV',
+      phone: '+91 326 257 1289',
+      status: 'Active'
+    },
+    {
+      id: 'USR-004',
+      name: 'Sunil Verma',
+      email: 'sverma@dgms.gov.in',
+      role: 'inspector',
+      designation: 'Environmental Compliance Officer',
+      department: 'DGMS Regional Inspectorate, Ranchi',
+      phone: '+91 651 249 1034',
+      status: 'Active'
+    },
+    {
+      id: 'USR-005',
+      name: 'R. K. Agarwal',
+      email: 'ccl.mine@coal.gov.in',
+      role: 'mine',
+      designation: 'General Manager (Mines)',
+      department: 'Central Coalfields Limited (CCL)',
+      mineId: 'KD-104',
+      mineName: 'Amrapali Open Cast Mine',
+      phone: '+91 651 236 0001',
+      status: 'Inactive'
+    }
+  ]);
 
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [newName, setNewName] = useState('');
@@ -19,60 +73,40 @@ export const AdminUsers: React.FC = () => {
   const [newDesignation, setNewDesignation] = useState('');
   const [newDepartment, setNewDepartment] = useState('');
 
-  const loadUsers = async () => {
-    try {
-      const data = await authService.getUsers();
-      setUsers(data || []);
-    } catch (err) {
-      console.error('Failed to load users', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadUsers();
-  }, []);
-
-  const toggleUserStatus = async (id: string) => {
-    const target = users.find((u) => u.id === id);
-    if (!target) return;
-    const newStatus = target.status === 'Active' ? 'Inactive' : 'Active';
-    try {
-      await authService.updateUser(id, { status: newStatus });
-      showToast(`Account status for ${target.name} set to ${newStatus}`, 'info');
-      await loadUsers();
-    } catch (err) {
-      showToast('Failed to update user status', 'warn');
-    }
+  const toggleUserStatus = (id: string) => {
+    setUsers((prev) =>
+      prev.map((u) => {
+        if (u.id === id) {
+          const newStatus = u.status === 'Active' ? 'Inactive' : 'Active';
+          showToast(`Account status for ${u.name} set to ${newStatus}`, 'info');
+          return { ...u, status: newStatus };
+        }
+        return u;
+      })
+    );
   };
 
   const resetUserPassword = (u: User) => {
     showToast(`Temporary security credentials dispatched to ${u.email}`, 'success');
   };
 
-  const handleAddUser = async (e: React.FormEvent) => {
+  const handleAddUser = (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      const newUser = await authService.createUser({
-        name: newName,
-        email: newEmail,
-        role: newRole,
-        designation: newDesignation || 'Designated Officer',
-        department: newDepartment || 'Government of India',
-        status: 'Active'
-      });
+    const newUser: User = {
+      id: `USR-00${users.length + 1}`,
+      name: newName,
+      email: newEmail,
+      role: newRole,
+      designation: newDesignation || 'Designated Officer',
+      department: newDepartment || 'Government of India',
+      status: 'Active'
+    };
 
-      await loadUsers();
-      showToast(`User ${newUser.name} provisioned with role ${newRole.toUpperCase()}`, 'success');
-      setIsAddUserOpen(false);
-      setNewName('');
-      setNewEmail('');
-      setNewDesignation('');
-      setNewDepartment('');
-    } catch (err) {
-      showToast('Failed to provision user', 'warn');
-    }
+    setUsers((prev) => [...prev, newUser]);
+    showToast(`User ${newUser.name} provisioned with role ${newRole.toUpperCase()}`, 'success');
+    setIsAddUserOpen(false);
+    setNewName('');
+    setNewEmail('');
   };
 
   const filteredUsers = users.filter(

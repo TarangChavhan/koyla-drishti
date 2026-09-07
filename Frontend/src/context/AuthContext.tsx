@@ -8,7 +8,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (emailOrId: string, password?: string, preferredRole?: UserRole) => Promise<User>;
-  switchRole: (newRole: UserRole) => Promise<User>;
+  switchRole: (newRole: UserRole) => void;
   logout: () => void;
   refreshUser: () => void;
 }
@@ -36,15 +36,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const switchRole = async (newRole: UserRole): Promise<User> => {
-    setIsLoading(true);
-    try {
-      const switchedUser = await authService.switchRole(newRole);
-      setUser(switchedUser);
-      return switchedUser;
-    } finally {
-      setIsLoading(false);
-    }
+  const switchRole = (newRole: UserRole) => {
+    const switchedUser = authService.switchRole(newRole);
+    setUser(switchedUser);
   };
 
   const logout = () => {
