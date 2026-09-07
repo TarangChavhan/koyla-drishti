@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import { violationService } from '../../services/violationService';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { SubmitEvidenceModal } from '../../components/mine/SubmitEvidenceModal';
@@ -7,11 +8,28 @@ import { CorrectiveAction } from '../../types';
 import { FileCheck, UploadCloud, CheckCircle2, Clock, Eye } from 'lucide-react';
 
 export const MineActions: React.FC = () => {
+  const { user } = useAuth();
   const { showToast } = useToast();
-  const currentMineId = 'KD-101';
-  const [actions, setActions] = useState(violationService.getActionsByMine(currentMineId));
+  const currentMineId = user?.mineId || 'KD-101';
+  const [actions, setActions] = useState<CorrectiveAction[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedAction, setSelectedAction] = useState<CorrectiveAction | null>(null);
   const [isSubmitOpen, setIsSubmitOpen] = useState(false);
+
+  const loadData = async () => {
+    try {
+      const data = await violationService.getActionsByMine(currentMineId);
+      setActions(data || []);
+    } catch (err) {
+      console.error('Failed to load mine actions', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, [currentMineId]);
 
   const openSubmit = (act: CorrectiveAction) => {
     setSelectedAction(act);
@@ -19,7 +37,7 @@ export const MineActions: React.FC = () => {
   };
 
   const refreshData = () => {
-    setActions(violationService.getActionsByMine(currentMineId));
+    loadData();
   };
 
   return (

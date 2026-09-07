@@ -26,7 +26,7 @@ export const SubmitEvidenceModal: React.FC<SubmitEvidenceModalProps> = ({
 
   if (!action) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!responseNote.trim()) {
       showToast('Please provide a technical explanation of the remediation undertaken.', 'warn');
@@ -34,13 +34,16 @@ export const SubmitEvidenceModal: React.FC<SubmitEvidenceModalProps> = ({
     }
 
     setIsSubmitting(true);
-    setTimeout(() => {
-      violationService.submitMineResponse(action.id, responseNote, selectedFileName || 'Verification_Evidence_Dossier.pdf');
-      setIsSubmitting(false);
+    try {
+      await violationService.submitMineResponse(action.id, responseNote, selectedFileName || 'Verification_Evidence_Dossier.pdf');
       showToast(`Corrective evidence submitted for ${action.id}. Forwarded to inspector.`, 'success');
       if (onSubmitted) onSubmitted();
       onClose();
-    }, 450);
+    } catch (err: any) {
+      showToast(err.message || 'Failed to submit corrective action response', 'warn');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

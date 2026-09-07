@@ -17,8 +17,12 @@ import {
 
 export const AdminCompliance: React.FC = () => {
   const { showToast } = useToast();
-  const [mines] = useState(mineService.getAllMines());
+  const [mines, setMines] = useState<any[]>([]);
   const [categoryFilter, setCategoryFilter] = useState('All');
+
+  React.useEffect(() => {
+    mineService.getAllMines().then((data) => setMines(data || [])).catch(() => {});
+  }, []);
 
   const complianceCategories = [
     { title: 'Mine Safety & Geotechnical Stability', compliance: 91, target: 95, color: '#18a873', icon: ShieldCheck, status: 'On Target' },

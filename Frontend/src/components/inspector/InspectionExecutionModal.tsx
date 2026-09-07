@@ -41,20 +41,23 @@ export const InspectionExecutionModal: React.FC<InspectionExecutionModalProps> =
     );
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Update inspection
-    inspectionService.updateInspection(inspection.id, {
-      checklistItems: checklist,
-      observations,
-      recommendations,
-      status: finalStatus,
-      evidenceFilesCount: inspection.evidenceFilesCount + 1
-    });
+    try {
+      await inspectionService.updateInspection(inspection.id, {
+        checklistItems: checklist,
+        observations,
+        recommendations,
+        status: finalStatus,
+        evidenceFilesCount: inspection.evidenceFilesCount + 1
+      });
 
-    showToast(`Inspection report for ${inspection.id} updated (${finalStatus})`, 'success');
-    if (onSaved) onSaved();
-    onClose();
+      showToast(`Inspection report for ${inspection.id} updated (${finalStatus})`, 'success');
+      if (onSaved) onSaved();
+      onClose();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to update inspection report', 'warn');
+    }
   };
 
   const completedCount = checklist.filter((c) => c.completed).length;

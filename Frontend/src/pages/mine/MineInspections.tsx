@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import { inspectionService } from '../../services/inspectionService';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { InspectionExecutionModal } from '../../components/inspector/InspectionExecutionModal';
@@ -7,10 +8,17 @@ import { Inspection } from '../../types';
 import { Calendar, CheckCircle2, Clock, Eye, FileText } from 'lucide-react';
 
 export const MineInspections: React.FC = () => {
-  const currentMineId = 'KD-101';
-  const [inspections] = useState(inspectionService.getInspectionsByMine(currentMineId));
+  const { user } = useAuth();
+  const currentMineId = user?.mineId || 'KD-101';
+  const [inspections, setInspections] = useState<Inspection[]>([]);
   const [selectedInspection, setSelectedInspection] = useState<Inspection | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  useEffect(() => {
+    inspectionService.getInspectionsByMine(currentMineId).then((data) => {
+      setInspections(data || []);
+    }).catch(() => {});
+  }, [currentMineId]);
 
   const openInspection = (ins: Inspection) => {
     setSelectedInspection(ins);

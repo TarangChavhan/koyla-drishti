@@ -1,10 +1,29 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import { mineService } from '../../services/mineService';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { Building2, MapPin, ShieldCheck, Mail, Phone, Calendar, UserCheck } from 'lucide-react';
+import { Mine } from '../../types';
 
 export const MineProfile: React.FC = () => {
-  const mine = mineService.getMineById('KD-101') || mineService.getAllMines()[0];
+  const { user } = useAuth();
+  const currentMineId = user?.mineId || 'KD-101';
+  const [mine, setMine] = useState<Mine | null>(null);
+
+  useEffect(() => {
+    mineService.getMineById(currentMineId).then((m) => {
+      if (m) setMine(m);
+      else mineService.getAllMines().then((all) => setMine(all[0] || null));
+    }).catch(() => {});
+  }, [currentMineId]);
+
+  if (!mine) {
+    return (
+      <div className="p-8 text-center text-xs text-[#728594]">
+        Loading mine lease profile...
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl space-y-6">

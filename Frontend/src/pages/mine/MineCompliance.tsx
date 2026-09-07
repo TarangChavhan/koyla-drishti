@@ -1,12 +1,23 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import { mineService } from '../../services/mineService';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { useToast } from '../../context/ToastContext';
 import { ShieldCheck, AlertTriangle, CheckCircle2, Clock, Layers, FileCheck, Download } from 'lucide-react';
+import { Mine } from '../../types';
 
 export const MineCompliance: React.FC = () => {
+  const { user } = useAuth();
   const { showToast } = useToast();
-  const mine = mineService.getMineById('KD-101') || mineService.getAllMines()[0];
+  const currentMineId = user?.mineId || 'KD-101';
+  const [mine, setMine] = useState<Mine | null>(null);
+
+  useEffect(() => {
+    mineService.getMineById(currentMineId).then((m) => {
+      if (m) setMine(m);
+      else mineService.getAllMines().then((all) => setMine(all[0] || null));
+    }).catch(() => {});
+  }, [currentMineId]);
 
   const categories = [
     { title: 'Mine Geotechnical Slope & Bench Safety', score: 82, target: 90, status: 'Satisfactory', notes: 'Bench angles compliant with DGMS circular 04/2021.' },
@@ -23,7 +34,7 @@ export const MineCompliance: React.FC = () => {
             Mine Compliance Scorecard & Remediation Matrix
           </h1>
           <p className="text-xs text-[#728594]">
-            {mine.name} · DGMS Statutory Compliance Breakdown
+            {mine?.name || 'Mine Facility'} · DGMS Statutory Compliance Breakdown
           </p>
         </div>
         <button

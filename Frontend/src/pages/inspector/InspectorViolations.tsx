@@ -19,8 +19,9 @@ import {
 
 export const InspectorViolations: React.FC = () => {
   const { showToast } = useToast();
-  const [violations, setViolations] = useState(violationService.getAllViolations());
-  const [correctiveActions, setCorrectiveActions] = useState(violationService.getAllCorrectiveActions());
+  const [violations, setViolations] = useState<Violation[]>([]);
+  const [correctiveActions, setCorrectiveActions] = useState<CorrectiveAction[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'violations' | 'actions'>('violations');
 
@@ -28,6 +29,25 @@ export const InspectorViolations: React.FC = () => {
   const [selectedAction, setSelectedAction] = useState<CorrectiveAction | null>(null);
   const [isAdjudicateOpen, setIsAdjudicateOpen] = useState(false);
   const [officerDecisionNote, setOfficerDecisionNote] = useState('');
+
+  const loadData = async () => {
+    try {
+      const [vList, aList] = await Promise.all([
+        violationService.getAllViolations(),
+        violationService.getAllCorrectiveActions()
+      ]);
+      setViolations(vList || []);
+      setCorrectiveActions(aList || []);
+    } catch (err) {
+      console.error('Failed to load violations/actions', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    loadData();
+  }, []);
 
   const filteredViolations = violations.filter(
     (v) =>
@@ -49,30 +69,36 @@ export const InspectorViolations: React.FC = () => {
     setIsAdjudicateOpen(true);
   };
 
-  const handleApproveAction = () => {
+  const handleApproveAction = async () => {
     if (!selectedAction) return;
-    violationService.updateActionStatus(
-      selectedAction.id,
-      'Approved',
-      officerDecisionNote || 'Statutory rectification verified through attached laboratory calibration & site photographic evidence.'
-    );
-    showToast(`Corrective Action ${selectedAction.id} Approved & Case Closed`, 'success');
-    setCorrectiveActions(violationService.getAllCorrectiveActions());
-    setViolations(violationService.getAllViolations());
-    setIsAdjudicateOpen(false);
+    try {
+      await violationService.inspectorReviewAction(
+        selectedAction.id,
+        'Approved',
+        officerDecisionNote || 'Statutory rectification verified through attached laboratory calibration & site photographic evidence.'
+      );
+      showToast(`Corrective Action ${selectedAction.id} Approved & Case Closed`, 'success');
+      await loadData();
+      setIsAdjudicateOpen(false);
+    } catch (err) {
+      showToast('Failed to approve corrective action', 'warn');
+    }
   };
 
-  const handleRejectAction = () => {
+  const handleRejectAction = async () => {
     if (!selectedAction) return;
-    violationService.updateActionStatus(
-      selectedAction.id,
-      'Rejected',
-      officerDecisionNote || 'Evidence insufficient. Further technical modification required.'
-    );
-    showToast(`Corrective Action ${selectedAction.id} Rejected. Mine must resubmit.`, 'warn');
-    setCorrectiveActions(violationService.getAllCorrectiveActions());
-    setViolations(violationService.getAllViolations());
-    setIsAdjudicateOpen(false);
+    try {
+      await violationService.inspectorReviewAction(
+        selectedAction.id,
+        'Rejected',
+        officerDecisionNote || 'Evidence insufficient. Further technical modification required.'
+      );
+      showToast(`Corrective Action ${selectedAction.id} Rejected. Mine must resubmit.`, 'warn');
+      await loadData();
+      setIsAdjudicateOpen(false);
+    } catch (err) {
+      showToast('Failed to reject corrective action', 'warn');
+    }
   };
 
   return (

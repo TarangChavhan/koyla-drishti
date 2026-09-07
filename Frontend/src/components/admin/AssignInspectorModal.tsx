@@ -28,37 +28,41 @@ export const AssignInspectorModal: React.FC<AssignInspectorModalProps> = ({
   const [priority, setPriority] = useState<'Routine' | 'Priority' | 'Urgent'>('Priority');
   const [purpose, setPurpose] = useState('Statutory field verification and compliance audit.');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const mine = mines.find((m) => m.id === selectedMineId) || mines[0];
 
-    // Create scheduled inspection
-    const newInsp = inspectionService.createInspection({
-      mineId: mine.id,
-      mineName: mine.name,
-      inspectorName,
-      inspectorId: inspectorName.includes('Rajesh') ? 'USR-002' : 'USR-004',
-      inspectionType,
-      date: scheduledDate,
-      time: '10:30 AM',
-      status: 'Scheduled',
-      priority,
-      purpose,
-      checklistItems: [
-        { id: 'chk-1', label: 'Verify primary haul road slope and berm standard', completed: false },
-        { id: 'chk-2', label: 'Check worker personal protective equipment registry', completed: false },
-        { id: 'chk-3', label: 'Examine DGMS statutory observation compliance log', completed: false },
-        { id: 'chk-4', label: 'Inspect continuous ambient dust monitors & water sprinklers', completed: false }
-      ]
-    });
+    try {
+      // Create scheduled inspection
+      const newInsp = await inspectionService.createInspection({
+        mineId: mine.id,
+        mineName: mine.name,
+        inspectorName,
+        inspectorId: inspectorName.includes('Rajesh') ? 'USR-002' : 'USR-004',
+        inspectionType,
+        date: scheduledDate,
+        time: '10:30 AM',
+        status: 'Scheduled',
+        priority,
+        purpose,
+        checklistItems: [
+          { id: 'chk-1', label: 'Verify primary haul road slope and berm standard', completed: false },
+          { id: 'chk-2', label: 'Check worker personal protective equipment registry', completed: false },
+          { id: 'chk-3', label: 'Examine DGMS statutory observation compliance log', completed: false },
+          { id: 'chk-4', label: 'Inspect continuous ambient dust monitors & water sprinklers', completed: false }
+        ]
+      });
 
-    if (alertId) {
-      alertService.assignInspector(alertId, inspectorName);
+      if (alertId) {
+        await alertService.assignInspector(alertId, inspectorName);
+      }
+
+      showToast(`Inspection ${newInsp.id} assigned to ${inspectorName} for ${mine.name}`, 'success');
+      if (onAssigned) onAssigned();
+      onClose();
+    } catch (err: any) {
+      showToast(err.message || 'Failed to assign inspection', 'warn');
     }
-
-    showToast(`Inspection ${newInsp.id} assigned to ${inspectorName} for ${mine.name}`, 'success');
-    if (onAssigned) onAssigned();
-    onClose();
   };
 
   return (

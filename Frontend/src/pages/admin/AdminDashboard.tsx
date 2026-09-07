@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { KpiCard } from '../../components/common/KpiCard';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { mineService } from '../../services/mineService';
 import { alertService } from '../../services/alertService';
 import { inspectionService } from '../../services/inspectionService';
+import { dashboardService, AdminDashboardData } from '../../services/dashboardService';
 import { AddMineModal } from '../../components/admin/AddMineModal';
 import { AssignInspectorModal } from '../../components/admin/AssignInspectorModal';
 import { GenerateReportModal } from '../../components/admin/GenerateReportModal';
 import { useToast } from '../../context/ToastContext';
+import { Mine, AIAlert, Inspection } from '../../types';
 import {
   Pickaxe,
   CheckCircle2,
@@ -29,13 +31,51 @@ export const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
 
-  const [mines, setMines] = useState(mineService.getAllMines());
-  const [alerts, setAlerts] = useState(alertService.getAllAlerts());
-  const [inspections, setInspections] = useState(inspectionService.getAllInspections());
+  const [dashboardData, setDashboardData] = useState<AdminDashboardData>({
+    total_mines: 6,
+    compliant_mines: 4,
+    compliance_rate: 66.7,
+    pending_violations: 2,
+    resolved_reports: 5,
+    high_risk_mines: 2,
+    pending_inspections: 2,
+    active_alerts: 3,
+    recent_alerts: [],
+    compliance_categories: []
+  });
+
+  const [mines, setMines] = useState<Mine[]>([]);
+  const [alerts, setAlerts] = useState<AIAlert[]>([]);
+  const [inspections, setInspections] = useState<Inspection[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [isAddMineOpen, setIsAddMineOpen] = useState(false);
   const [isAssignInspectorOpen, setIsAssignInspectorOpen] = useState(false);
   const [isGenerateReportOpen, setIsGenerateReportOpen] = useState(false);
+
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      const [dash, minesList, alertsList, inspsList] = await Promise.all([
+        dashboardService.getAdminDashboard(),
+        mineService.getAllMines(),
+        alertService.getAllAlerts(),
+        inspectionService.getAllInspections()
+      ]);
+      setDashboardData(dash);
+      setMines(minesList);
+      setAlerts(alertsList);
+      setInspections(inspsList);
+    } catch (e: any) {
+      console.error('Failed loading admin dashboard data:', e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -66,11 +106,15 @@ export const AdminDashboard: React.FC = () => {
           <div className="flex items-center gap-3">
             <div className="bg-[#04121f]/60 backdrop-blur-md border border-white/15 rounded-xl p-3.5 min-w-[110px] text-center">
               <span className="block text-[10px] text-[#a9c0cc] uppercase font-bold">Active Mines</span>
-              <strong className="block text-2xl font-black text-white mt-1">412</strong>
+              <strong className="block text-2xl font-black text-white mt-1">
+                {isLoading ? '...' : dashboardData.total_mines}
+              </strong>
             </div>
             <div className="bg-[#04121f]/60 backdrop-blur-md border border-white/15 rounded-xl p-3.5 min-w-[110px] text-center">
               <span className="block text-[10px] text-[#a9c0cc] uppercase font-bold">High Risk</span>
-              <strong className="block text-2xl font-black text-[#df4d52] mt-1">28</strong>
+              <strong className="block text-2xl font-black text-[#df4d52] mt-1">
+                {isLoading ? '...' : dashboardData.high_risk_mines}
+              </strong>
             </div>
           </div>
         </div>
@@ -80,7 +124,7 @@ export const AdminDashboard: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
           label="Total Registered Mines"
-          value="412"
+          value={isLoading ? '...' : String(dashboardData.total_mines)}
           subtext="+2.5% from last quarter"
           subtextColor="green"
           icon={<Pickaxe className="w-5 h-5" />}
@@ -88,15 +132,15 @@ export const AdminDashboard: React.FC = () => {
         />
         <KpiCard
           label="Compliant Mines"
-          value="296"
-          subtext="71.8% National Compliance Rate"
+          value={isLoading ? '...' : String(dashboardData.compliant_mines)}
+          subtext={`${dashboardData.compliance_rate}% National Compliance Rate`}
           subtextColor="green"
           icon={<CheckCircle2 className="w-5 h-5" />}
           onClick={() => navigate('/admin/compliance')}
         />
         <KpiCard
           label="Pending Violations"
-          value="86"
+          value={isLoading ? '...' : String(dashboardData.pending_violations)}
           subtext="+12 new cases this week"
           subtextColor="red"
           icon={<AlertTriangle className="w-5 h-5" />}
@@ -104,8 +148,8 @@ export const AdminDashboard: React.FC = () => {
         />
         <KpiCard
           label="Resolved Reports"
-          value="1,248"
-          subtext="87% Case Resolution Rate"
+          value={isLoading ? '...' : String(dashboardData.resolved_reports)}
+          subtext="Case Resolution Verified"
           subtextColor="green"
           icon={<FileCheck2 className="w-5 h-5" />}
           onClick={() => navigate('/admin/reports')}
@@ -132,11 +176,11 @@ export const AdminDashboard: React.FC = () => {
             <div
               className="w-32 h-32 rounded-full relative flex items-center justify-center shrink-0 shadow-inner"
               style={{
-                background: `conic-gradient(#18a873 0% 71.8%, #e7a92b 71.8% 87.3%, #df4d52 87.3% 100%)`
+                background: `conic-gradient(#18a873 0% ${dashboardData.compliance_rate}%, #e7a92b ${dashboardData.compliance_rate}% 87.3%, #df4d52 87.3% 100%)`
               }}
             >
               <div className="w-20 h-20 bg-white rounded-full flex flex-col items-center justify-center shadow-md">
-                <strong className="text-xl font-black text-[#152737]">71.8%</strong>
+                <strong className="text-xl font-black text-[#152737]">{dashboardData.compliance_rate}%</strong>
                 <span className="text-[9px] text-[#728594] font-semibold">Compliant</span>
               </div>
             </div>
@@ -146,19 +190,19 @@ export const AdminDashboard: React.FC = () => {
                 <span className="flex items-center gap-1.5 text-[#526a79]">
                   <span className="w-2.5 h-2.5 rounded-full bg-[#18a873]" /> Compliant
                 </span>
-                <strong className="text-[#152737]">296 (71.8%)</strong>
+                <strong className="text-[#152737]">{dashboardData.compliant_mines} ({dashboardData.compliance_rate}%)</strong>
               </div>
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1.5 text-[#526a79]">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#e7a92b]" /> Under Review
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#e7a92b]" /> High Risk
                 </span>
-                <strong className="text-[#152737]">64 (15.5%)</strong>
+                <strong className="text-[#152737]">{dashboardData.high_risk_mines}</strong>
               </div>
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1.5 text-[#526a79]">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#df4d52]" /> Non-Compliant
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#df4d52]" /> Active Alerts
                 </span>
-                <strong className="text-[#152737]">52 (12.7%)</strong>
+                <strong className="text-[#152737]">{dashboardData.active_alerts}</strong>
               </div>
             </div>
           </div>
@@ -206,7 +250,7 @@ export const AdminDashboard: React.FC = () => {
               onClick={() => navigate('/admin/alerts')}
               className="text-[11px] font-bold text-[#126fba] hover:underline"
             >
-              All (12) →
+              All ({alerts.length}) →
             </button>
           </div>
 
@@ -241,110 +285,16 @@ export const AdminDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Row 2: Violation Trends Line Chart & Mine Risk Distribution Bar Chart */}
+      {/* Row 3: Upcoming Inspections & Administrative Quick Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Violation Trends */}
-        <div className="lg:col-span-7 bg-white border border-[#e2e9ee] rounded-2xl p-5 shadow-sm space-y-3">
+        {/* Upcoming Inspections Table */}
+        <div className="lg:col-span-8 bg-white border border-[#e2e9ee] rounded-2xl p-5 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-[#e2e9ee] pb-3">
             <div>
               <h3 className="text-xs font-bold text-[#152737] uppercase tracking-wider">
-                Violation Trajectory Trends (9 Months)
+                Upcoming DGMS Field Inspections
               </h3>
-              <p className="text-[11px] text-[#728594]">Detected Anomalies vs Resolved Remediations</p>
-            </div>
-            <div className="flex items-center gap-3 text-[11px] font-semibold">
-              <span className="flex items-center gap-1 text-[#df4d52]">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#df4d52]" /> Detected
-              </span>
-              <span className="flex items-center gap-1 text-[#18a873]">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#18a873]" /> Resolved
-              </span>
-            </div>
-          </div>
-
-          {/* SVG Line Chart */}
-          <div className="h-44 w-full pt-2">
-            <svg viewBox="0 0 560 170" className="w-full h-full" preserveAspectRatio="none">
-              <g stroke="#edf2f5" strokeWidth="1">
-                <line x1="30" y1="140" x2="550" y2="140" />
-                <line x1="30" y1="100" x2="550" y2="100" />
-                <line x1="30" y1="60" x2="550" y2="60" />
-                <line x1="30" y1="20" x2="550" y2="20" />
-              </g>
-              {/* Detected Line (Red) */}
-              <polyline
-                points="30,126 95,112 160,107 225,78 290,42 355,62 420,59 485,48 550,39"
-                fill="none"
-                stroke="#df4d52"
-                strokeWidth="3"
-                strokeLinecap="round"
-              />
-              {/* Resolved Line (Green) */}
-              <polyline
-                points="30,139 95,134 160,125 225,105 290,110 355,121 420,99 485,105 550,92"
-                fill="none"
-                stroke="#18a873"
-                strokeWidth="3"
-                strokeLinecap="round"
-              />
-            </svg>
-            <div className="flex justify-between text-[10px] text-[#728594] px-3 pt-1">
-              <span>Jan</span>
-              <span>Feb</span>
-              <span>Mar</span>
-              <span>Apr</span>
-              <span>May</span>
-              <span>Jun</span>
-              <span>Jul</span>
-              <span>Aug</span>
-              <span>Sep 2026</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Mine Risk Distribution Bar Chart */}
-        <div className="lg:col-span-5 bg-white border border-[#e2e9ee] rounded-2xl p-5 shadow-sm space-y-3">
-          <div className="flex items-center justify-between border-b border-[#e2e9ee] pb-3">
-            <div>
-              <h3 className="text-xs font-bold text-[#152737] uppercase tracking-wider">
-                National Mine Risk Distribution
-              </h3>
-              <p className="text-[11px] text-[#728594]">Current 412 Mine Classified Portfolio</p>
-            </div>
-          </div>
-
-          <div className="h-44 flex items-end justify-around px-4 pt-4 pb-2">
-            <div className="text-center space-y-1">
-              <div className="w-14 bg-[#18a873] rounded-t-lg mx-auto shadow-sm" style={{ height: '110px' }} />
-              <b className="text-xs text-[#152737] block">180</b>
-              <span className="text-[10px] text-[#728594] block">Low Risk</span>
-            </div>
-
-            <div className="text-center space-y-1">
-              <div className="w-14 bg-[#e7a92b] rounded-t-lg mx-auto shadow-sm" style={{ height: '88px' }} />
-              <b className="text-xs text-[#152737] block">145</b>
-              <span className="text-[10px] text-[#728594] block">Medium Risk</span>
-            </div>
-
-            <div className="text-center space-y-1">
-              <div className="w-14 bg-[#df4d52] rounded-t-lg mx-auto shadow-sm" style={{ height: '54px' }} />
-              <b className="text-xs text-[#152737] block">87</b>
-              <span className="text-[10px] text-[#728594] block">High Risk</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Row 3: Ongoing Inspections Table & Quick Action Tiles */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Ongoing Inspections */}
-        <div className="lg:col-span-8 bg-white border border-[#e2e9ee] rounded-2xl p-5 shadow-sm space-y-3">
-          <div className="flex items-center justify-between border-b border-[#e2e9ee] pb-3">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-[#126fba]" />
-              <h3 className="text-xs font-bold text-[#152737] uppercase tracking-wider">
-                Ongoing & Upcoming Inspections
-              </h3>
+              <p className="text-[11px] text-[#728594]">Authorized audits scheduled across coalfields</p>
             </div>
             <button
               onClick={() => navigate('/admin/inspections')}
@@ -431,13 +381,19 @@ export const AdminDashboard: React.FC = () => {
       <AddMineModal
         isOpen={isAddMineOpen}
         onClose={() => setIsAddMineOpen(false)}
-        onMineAdded={(newMine) => setMines(mineService.getAllMines())}
+        onMineAdded={async () => {
+          await loadData();
+          showToast('Mine successfully registered and dashboard metrics refreshed', 'success');
+        }}
       />
       <AssignInspectorModal
         isOpen={isAssignInspectorOpen}
         onClose={() => setIsAssignInspectorOpen(false)}
         mines={mines}
-        onAssigned={() => setInspections(inspectionService.getAllInspections())}
+        onAssigned={async () => {
+          await loadData();
+          showToast('Inspection assigned and workload metrics updated', 'success');
+        }}
       />
       <GenerateReportModal
         isOpen={isGenerateReportOpen}

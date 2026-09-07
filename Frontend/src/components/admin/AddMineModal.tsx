@@ -23,35 +23,39 @@ export const AddMineModal: React.FC<AddMineModalProps> = ({ isOpen, onClose, onM
   const [complianceScore, setComplianceScore] = useState(85);
   const [riskLevel, setRiskLevel] = useState<RiskLevel>('Low');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
-    const newMine = mineService.createMine({
-      name,
-      operator,
-      mineType,
-      state,
-      district,
-      address: address || `${district}, ${state}`,
-      contactOfficer: contactOfficer || 'Authorized Safety In-charge',
-      contactEmail: contactEmail || 'compliance@mine.gov.in',
-      complianceScore: Number(complianceScore),
-      riskLevel,
-      status: (complianceScore >= 75 ? 'Compliant' : complianceScore >= 60 ? 'Under Review' : 'Non-Compliant') as ComplianceStatus,
-      lastInspection: 'Just registered',
-      nextInspection: 'Scheduled Q4 2026'
-    });
+    try {
+      const newMine = await mineService.createMine({
+        name,
+        operator,
+        mineType,
+        state,
+        district,
+        address: address || `${district}, ${state}`,
+        contactOfficer: contactOfficer || 'Authorized Safety In-charge',
+        contactEmail: contactEmail || 'compliance@mine.gov.in',
+        complianceScore: Number(complianceScore),
+        riskLevel,
+        status: (complianceScore >= 75 ? 'Compliant' : complianceScore >= 60 ? 'Under Review' : 'Non-Compliant') as ComplianceStatus,
+        lastInspection: 'Just registered',
+        nextInspection: 'Scheduled Q4 2026'
+      });
 
-    showToast(`Mine ${newMine.name} successfully registered with ID ${newMine.id}`, 'success');
-    onMineAdded(newMine);
-    onClose();
+      showToast(`Mine ${newMine.name} successfully registered with ID ${newMine.id}`, 'success');
+      onMineAdded(newMine);
+      onClose();
 
-    // Reset fields
-    setName('');
-    setAddress('');
-    setContactOfficer('');
-    setContactEmail('');
+      // Reset fields
+      setName('');
+      setAddress('');
+      setContactOfficer('');
+      setContactEmail('');
+    } catch (err: any) {
+      showToast(err.message || 'Failed to register new mine', 'warn');
+    }
   };
 
   return (

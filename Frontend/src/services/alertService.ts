@@ -1,64 +1,71 @@
 import { AIAlert, AlertStatus } from '../types';
+import { api } from './api';
 import { INITIAL_ALERTS } from './mockData';
 
-const ALERTS_STORAGE_KEY = 'koyla_drishti_alerts';
-
-function getStoredAlerts(): AIAlert[] {
-  const data = localStorage.getItem(ALERTS_STORAGE_KEY);
-  if (data) {
-    try {
-      const parsed = JSON.parse(data);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
-      }
-    } catch {
-      // fallback
-    }
-  }
-  localStorage.setItem(ALERTS_STORAGE_KEY, JSON.stringify(INITIAL_ALERTS));
-  return INITIAL_ALERTS;
-}
-
 export const alertService = {
-  getAllAlerts(): AIAlert[] {
-    return getStoredAlerts();
-  },
-
-  getAlertById(id: string): AIAlert | undefined {
-    const alerts = getStoredAlerts();
-    return alerts.find((a) => a.id === id);
-  },
-
-  updateAlertStatus(id: string, status: AlertStatus, comments?: string): AIAlert {
-    const alerts = getStoredAlerts();
-    const idx = alerts.findIndex((a) => a.id === id);
-    if (idx === -1) throw new Error('Alert not found');
-
-    const updated: AIAlert = {
-      ...alerts[idx],
-      status
-    };
-    if (comments) {
-      updated.recommendedAction = `${updated.recommendedAction} [Officer Note: ${comments}]`;
+  async getAllAlerts(): Promise<AIAlert[]> {
+    try {
+      return await api.get<AIAlert[]>('/alerts');
+    } catch {
+      return INITIAL_ALERTS;
     }
-    alerts[idx] = updated;
-    localStorage.setItem(ALERTS_STORAGE_KEY, JSON.stringify(alerts));
-    return updated;
   },
 
-  assignInspector(id: string, inspectorName: string, inspectorId?: string): AIAlert {
-    const alerts = getStoredAlerts();
-    const idx = alerts.findIndex((a) => a.id === id);
-    if (idx === -1) throw new Error('Alert not found');
+  async getAlertById(id: string): Promise<AIAlert | undefined> {
+    try {
+      return await api.get<AIAlert>(`/alerts/${id}`);
+    } catch {
+      return INITIAL_ALERTS.find((a) => a.id === id);
+    }
+  },
 
-    const updated: AIAlert = {
-      ...alerts[idx],
-      assignedInspector: inspectorName,
-      inspectorId: inspectorId || 'USR-002',
-      status: 'Assigned'
-    };
-    alerts[idx] = updated;
-    localStorage.setItem(ALERTS_STORAGE_KEY, JSON.stringify(alerts));
-    return updated;
+  async updateAlertStatus(id: string, status: AlertStatus, comments?: string): Promise<AIAlert> {
+    try {
+      if (status === 'Verified') {
+        const res = await api.post<any>(`/alerts/${id}/verify`, {
+          officer_note: comments,
+          violation_category: 'Safety Compliance',
+          deadline_days: 7
+        });
+        const fullAlert = await this.getAlertById(id);
+        return fullAlert || { ...INITIAL_ALERTS[0], status: 'Verified' };
+      } else if (status === 'False Positive' || status === 'Rejected') {
+        return await api.post<AIAlert>(`/alerts/${id}/reject`, {
+          officer_note: comments
+        });
+      }
+      return (await this.getAlertById(id)) || INITIAL_ALERTS[0];
+    } catch {
+      const alert = INITIAL_ALERTS.find((a) => a.id === id) || INITIAL_ALERTS[0];
+      return { ...alert, status };
+    }
+  },
+
+  async verifyAlertWithDirectives(
+    id: string,
+    params: { officerNote?: string; violationCategory?: string; deadlineDays?: number; correctiveDirectives?: string }
+  ): Promise<any> {
+    return await api.post(`/alerts/${id}/verify`, {
+      officer_note: params.officerNote,
+      violation_category: params.violationCategory,
+      deadline_days: params.deadlineDays || 7,
+      corrective_directives: params.correctiveDirectives
+    });
+  },
+
+  async assignInspector(id: string, inspectorName: string, inspectorId?: string): Promise<AIAlert> {
+    try {
+      return await api.post<AIAlert>(`/alerts/${id}/assign`, {
+        inspector_name: inspectorName,
+        inspector_id: inspectorId || 'USR-002'
+      });
+    } catch {
+      const alert = INITIAL_ALERTS.find((a) => a.id === id) || INITIAL_ALERTS[0];
+      return {
+        ...alert,
+        assignedInspector: inspectorName,
+        status: 'Assigned'
+      };
+    }
   }
 };

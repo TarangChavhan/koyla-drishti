@@ -20,8 +20,9 @@ import {
 
 export const AdminInspections: React.FC = () => {
   const { showToast } = useToast();
-  const [inspections, setInspections] = useState(inspectionService.getAllInspections());
-  const [mines] = useState(mineService.getAllMines());
+  const [inspections, setInspections] = useState<Inspection[]>([]);
+  const [mines, setMines] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [typeFilter, setTypeFilter] = useState('All');
@@ -29,6 +30,25 @@ export const AdminInspections: React.FC = () => {
   const [isAssignOpen, setIsAssignOpen] = useState(false);
   const [selectedInspection, setSelectedInspection] = useState<Inspection | null>(null);
   const [isExecOpen, setIsExecOpen] = useState(false);
+
+  const loadData = async () => {
+    try {
+      const [fetchedInspections, fetchedMines] = await Promise.all([
+        inspectionService.getAllInspections(),
+        mineService.getAllMines()
+      ]);
+      setInspections(fetchedInspections || []);
+      setMines(fetchedMines || []);
+    } catch (err) {
+      console.error('Failed to load inspections', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    loadData();
+  }, []);
 
   const filteredInspections = useMemo(() => {
     return inspections.filter((ins) => {
@@ -48,7 +68,7 @@ export const AdminInspections: React.FC = () => {
   };
 
   const refreshData = () => {
-    setInspections(inspectionService.getAllInspections());
+    loadData();
   };
 
   return (

@@ -8,12 +8,28 @@ import { Sparkles, Search, Filter, Eye, CheckCircle2, XCircle, Clock } from 'luc
 
 export const InspectorAlerts: React.FC = () => {
   const { showToast } = useToast();
-  const [alerts, setAlerts] = useState(alertService.getAllAlerts());
+  const [alerts, setAlerts] = useState<AIAlert[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterSeverity, setFilterSeverity] = useState('All');
   const [filterStatus, setFilterStatus] = useState('All');
   const [selectedAlert, setSelectedAlert] = useState<AIAlert | null>(null);
   const [isVerifyOpen, setIsVerifyOpen] = useState(false);
+
+  const loadAlerts = async () => {
+    try {
+      const data = await alertService.getAllAlerts();
+      setAlerts(data || []);
+    } catch (err) {
+      console.error('Failed to load inspector alerts', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    loadAlerts();
+  }, []);
 
   const filteredAlerts = useMemo(() => {
     return alerts.filter((a) => {
@@ -38,7 +54,7 @@ export const InspectorAlerts: React.FC = () => {
   };
 
   const refreshAlerts = () => {
-    setAlerts(alertService.getAllAlerts());
+    loadAlerts();
   };
 
   return (
