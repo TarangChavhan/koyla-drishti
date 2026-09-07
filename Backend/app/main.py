@@ -1,4 +1,11 @@
+import sys
 import os
+
+# Ensure backend root is always on sys.path regardless of execution working directory
+_backend_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if _backend_root not in sys.path:
+    sys.path.insert(0, _backend_root)
+
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, status, HTTPException
