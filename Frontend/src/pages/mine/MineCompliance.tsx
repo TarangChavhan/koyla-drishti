@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { mineService } from '../../services/mineService';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { useToast } from '../../context/ToastContext';
-import { ShieldCheck, AlertTriangle, CheckCircle2, Clock, Layers, FileCheck, Download } from 'lucide-react';
+import { exportMineCompliancePDF } from '../../utils/pdfExport';
+import { ShieldCheck, AlertTriangle, CheckCircle2, Clock, Layers, FileCheck, Download, FileText } from 'lucide-react';
 
 export const MineCompliance: React.FC = () => {
   const { showToast } = useToast();
-  const mine = mineService.getMineById('KD-101') || mineService.getAllMines()[0];
+  const [isExporting, setIsExporting] = useState(false);
+  const mine = mineService.getMineById('KD-104') || mineService.getAllMines()[0];
 
   const categories = [
     { title: 'Mine Geotechnical Slope & Bench Safety', score: 82, target: 90, status: 'Satisfactory', notes: 'Bench angles compliant with DGMS circular 04/2021.' },
@@ -14,6 +16,18 @@ export const MineCompliance: React.FC = () => {
     { title: 'HEMM Heavy Machinery Maintenance', score: 88, target: 85, status: 'Compliant', notes: 'All 24 dumpers equipped with proximity sensors.' },
     { title: 'Statutory Documentation & Worker Medicals', score: 94, target: 95, status: 'Optimal', notes: 'Form B employment register updated and signed.' },
   ];
+
+  const handleExportPDF = () => {
+    try {
+      setIsExporting(true);
+      exportMineCompliancePDF(mine, categories);
+      showToast(`${mine.name} compliance audit dossier downloaded as PDF`, 'success');
+    } catch (err) {
+      showToast('Failed to generate PDF document. Please retry.', 'error');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -27,11 +41,12 @@ export const MineCompliance: React.FC = () => {
           </p>
         </div>
         <button
-          onClick={() => showToast('Compliance scorecard PDF generated', 'success')}
-          className="px-4 py-2 rounded-xl bg-white border border-[#e2e9ee] hover:bg-slate-50 text-xs font-semibold text-[#526a79] flex items-center gap-1.5 shadow-sm transition-colors"
+          onClick={handleExportPDF}
+          disabled={isExporting}
+          className="px-4 py-2 rounded-xl bg-white border border-[#e2e9ee] hover:bg-slate-50 text-xs font-semibold text-[#152737] flex items-center gap-2 shadow-sm transition-colors cursor-pointer disabled:opacity-50"
         >
           <Download className="w-4 h-4 text-[#126fba]" />
-          Download Compliance Audit PDF
+          <span>{isExporting ? 'Generating PDF...' : 'Download Compliance Audit PDF'}</span>
         </button>
       </div>
 

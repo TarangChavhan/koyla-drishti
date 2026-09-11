@@ -19,7 +19,8 @@ import {
   Send,
   HelpCircle,
   FileSpreadsheet,
-  FolderOpen
+  FolderOpen,
+  Camera
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -52,6 +53,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           items: [
             { to: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
             { to: '/admin/mines', label: 'Mines Overview', icon: Pickaxe },
+            { to: '/admin/cctv', label: 'CCTV Surveillance', icon: Camera },
             { to: '/admin/compliance', label: 'Compliance Monitoring', icon: CheckCircle2 },
             { to: '/admin/alerts', label: 'AI Alerts', icon: AlertTriangle, count: 12 }
           ]
@@ -80,6 +82,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           items: [
             { to: '/inspector/dashboard', label: 'Dashboard', icon: LayoutDashboard },
             { to: '/inspector/mines', label: 'Assigned Mines', icon: Pickaxe },
+            { to: '/inspector/cctv', label: 'CCTV Monitoring', icon: Camera },
             { to: '/inspector/alerts', label: 'AI Alerts', icon: AlertTriangle, count: 8 },
             { to: '/inspector/inspections', label: 'Inspections', icon: ClipboardList }
           ]
@@ -109,6 +112,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           items: [
             { to: '/mine/dashboard', label: 'Dashboard', icon: LayoutDashboard },
             { to: '/mine/profile', label: 'Mine Profile', icon: Pickaxe },
+            { to: '/mine/cctv', label: 'CCTV & Warning Siren', icon: Camera },
             { to: '/mine/submit-data', label: 'Submit Data', icon: Send },
             { to: '/mine/compliance', label: 'Compliance Status', icon: CheckCircle2 }
           ]

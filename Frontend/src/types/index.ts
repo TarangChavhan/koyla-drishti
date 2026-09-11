@@ -166,3 +166,5 @@ export interface NotificationItem {
   linkToModule?: string;
   priority?: 'normal' | 'high';
 }
+
+export * from './cctv';

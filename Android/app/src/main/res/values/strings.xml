@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">KOYLA DRISHTI</string>
+    <string name="tagline">AI-Powered Smart Governance &#38; Compliance Intelligence System for Coal Mines</string>
+    <!-- Basic strings for UI -->
+    <string name="login">Login</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="forgot_password">Forgot Password?</string>
+</resources>

@@ -18,6 +18,7 @@ import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { AdminMines } from './pages/admin/AdminMines';
 import { AdminCompliance } from './pages/admin/AdminCompliance';
 import { AdminAlerts } from './pages/admin/AdminAlerts';
+import { AdminCCTV } from './pages/admin/AdminCCTV';
 import { AdminInspections } from './pages/admin/AdminInspections';
 import { AdminReports } from './pages/admin/AdminReports';
 import { AdminExperts } from './pages/admin/AdminExperts';
@@ -28,6 +29,7 @@ import { AdminSettings } from './pages/admin/AdminSettings';
 // Inspector pages
 import { InspectorDashboard } from './pages/inspector/InspectorDashboard';
 import { InspectorAlerts } from './pages/inspector/InspectorAlerts';
+import { InspectorCCTV } from './pages/inspector/InspectorCCTV';
 import { InspectorInspections } from './pages/inspector/InspectorInspections';
 import { InspectorViolations } from './pages/inspector/InspectorViolations';
 import { InspectorReports } from './pages/inspector/InspectorReports';
@@ -36,6 +38,7 @@ import { InspectorProfile } from './pages/inspector/InspectorProfile';
 // Mine Authority pages
 import { MineDashboard } from './pages/mine/MineDashboard';
 import { MineProfile } from './pages/mine/MineProfile';
+import { MineCCTV } from './pages/mine/MineCCTV';
 import { MineSubmitData } from './pages/mine/MineSubmitData';
 import { MineCompliance } from './pages/mine/MineCompliance';
 import { MineViolations } from './pages/mine/MineViolations';
@@ -98,6 +101,7 @@ export default function App() {
               <Route index element={<Navigate to="/admin/dashboard" replace />} />
               <Route path="dashboard" element={<AdminDashboard />} />
               <Route path="mines" element={<AdminMines />} />
+              <Route path="cctv" element={<AdminCCTV />} />
               <Route path="compliance" element={<AdminCompliance />} />
               <Route path="alerts" element={<AdminAlerts />} />
               <Route path="inspections" element={<AdminInspections />} />
@@ -120,6 +124,7 @@ export default function App() {
               <Route index element={<Navigate to="/inspector/dashboard" replace />} />
               <Route path="dashboard" element={<InspectorDashboard />} />
               <Route path="mines" element={<AdminMines />} />
+              <Route path="cctv" element={<InspectorCCTV />} />
               <Route path="alerts" element={<InspectorAlerts />} />
               <Route path="inspections" element={<InspectorInspections />} />
               <Route path="violations" element={<InspectorViolations />} />
@@ -142,6 +147,7 @@ export default function App() {
               <Route index element={<Navigate to="/mine/dashboard" replace />} />
               <Route path="dashboard" element={<MineDashboard />} />
               <Route path="profile" element={<MineProfile />} />
+              <Route path="cctv" element={<MineCCTV />} />
               <Route path="submit-data" element={<MineSubmitData />} />
               <Route path="compliance" element={<MineCompliance />} />
               <Route path="violations" element={<MineViolations />} />
